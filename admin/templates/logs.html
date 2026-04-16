@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Logs{% endblock %}
+
+{% block content %}
+<h1>Logs</h1>
+
+<form method="get" class="filters">
+    <label>
+        Level
+        <select name="level">
+            <option value="">all</option>
+            {% for lv in ['DEBUG','INFO','WARNING','ERROR','CRITICAL'] %}
+                <option value="{{ lv }}" {% if filter_level == lv %}selected{% endif %}>{{ lv }}</option>
+            {% endfor %}
+        </select>
+    </label>
+    <label>
+        Service
+        <input type="text" name="service" value="{{ filter_service or '' }}" placeholder="api, scheduler, ...">
+    </label>
+    <button type="submit">Filter</button>
+</form>
+
+<table class="data">
+    <thead>
+        <tr>
+            <th>Time</th>
+            <th>Level</th>
+            <th>Service</th>
+            <th>Operation</th>
+            <th>Message</th>
+            <th>Request</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for log in logs %}
+        <tr class="level-{{ log.level }}">
+            <td>{{ log.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+            <td>{{ log.level }}</td>
+            <td>{{ log.service }}</td>
+            <td>{{ log.operation }}</td>
+            <td>{{ log.message }}</td>
+            <td><code>{{ log.request_id or '' }}</code></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6">No logs match the filter.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

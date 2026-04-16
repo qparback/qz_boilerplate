@@ -1,0 +1,123 @@
+# Base Docker Compose configuration
+# Do NOT run this directly — use environment-specific overrides via the Makefile.
+# Usage: docker compose -f docker/docker-compose.yml -f docker/docker-compose.dev.yml up
+#
+# Required env vars (interpolated at compose time, supplied via --env-file):
+#   PROJECT_NAME, ENV, POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB
+
+services:
+
+  # ─── PostgreSQL Database ────────────────────────────────────────────────────
+  app-db:
+    container_name: ${PROJECT_NAME}-db
+    image: postgres:16-alpine
+    env_file:
+      - ../env/.env.${ENV}.config
+      - ../env/.env.${ENV}
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    networks:
+      - app-net
+    volumes:
+      - app_pgdata:/var/lib/postgresql/data
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: unless-stopped
+
+  # ─── FastAPI Application ────────────────────────────────────────────────────
+  app-api:
+    container_name: ${PROJECT_NAME}-api
+    build:
+      context: ..
+      dockerfile: docker/dockerfiles/Dockerfile.api
+    depends_on:
+      app-db:
+        condition: service_healthy
+    env_file:
+      - ../env/.env.${ENV}.config
+      - ../env/.env.${ENV}
+    environment:
+      POSTGRES_HOST: ${PROJECT_NAME}-db
+    networks:
+      - app-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+    restart: unless-stopped
+
+  # ─── Scheduler Service ──────────────────────────────────────────────────────
+  app-scheduler:
+    container_name: ${PROJECT_NAME}-scheduler
+    build:
+      context: ..
+      dockerfile: docker/dockerfiles/Dockerfile.scheduler
+    depends_on:
+      app-db:
+        condition: service_healthy
+    env_file:
+      - ../env/.env.${ENV}.config
+      - ../env/.env.${ENV}
+    environment:
+      POSTGRES_HOST: ${PROJECT_NAME}-db
+    networks:
+      - app-net
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: unless-stopped
+
+  # ─── Caddy Reverse Proxy ────────────────────────────────────────────────────
+  app-caddy:
+    container_name: ${PROJECT_NAME}-caddy
+    image: caddy:2-alpine
+    depends_on:
+      app-api:
+        condition: service_healthy
+    env_file:
+      - ../env/.env.${ENV}.config
+      - ../env/.env.${ENV}
+    networks:
+      - app-net
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: unless-stopped
+
+volumes:
+  app_pgdata:
+    external: true
+    name: ${PROJECT_NAME}_pgdata
+  caddy_data:
+  caddy_config:
+
+networks:
+  app-net:
+    external: true
+    name: ${PROJECT_NAME}-net

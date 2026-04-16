@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Admin{% endblock %} — {{ project_name }}</title>
+    <link rel="stylesheet" href="/admin/static/admin.css">
+</head>
+<body>
+    <header class="topbar">
+        <div class="brand">
+            <strong>{{ project_name }}</strong>
+            <span class="env env-{{ app_env }}">{{ app_env }}</span>
+        </div>
+        <nav>
+            <a href="/admin/">Dashboard</a>
+            <a href="/admin/logs">Logs</a>
+            <a href="/admin/prompts">Prompts</a>
+            <a href="/admin/roadmap">Roadmap</a>
+            <a href="/api/docs" target="_blank">API docs</a>
+        </nav>
+    </header>
+
+    <main class="content">
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="footer">
+        <small>{{ project_name }} admin — {{ app_env }}</small>
+    </footer>
+</body>
+</html>

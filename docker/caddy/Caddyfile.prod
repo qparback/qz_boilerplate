@@ -1,0 +1,41 @@
+# Production Caddy — automatic TLS via Let's Encrypt
+{
+    email {$ADMIN_EMAIL}
+}
+
+{$DOMAIN} {
+    # Rate limiting placeholder — Caddy core does not include rate_limit by default;
+    # enable via xcaddy build with caddy-ratelimit module if needed.
+
+    # API routes — strip /api prefix, protected by API key in FastAPI
+    handle_path /api/* {
+        reverse_proxy app-api:8000
+    }
+
+    # Admin interface — IP-restricted
+    @admin_blocked {
+        path /admin*
+        not remote_ip {$ADMIN_IP_WHITELIST}
+    }
+    handle @admin_blocked {
+        respond "Forbidden" 403
+    }
+    handle /admin* {
+        reverse_proxy app-api:8000
+    }
+
+    handle /health {
+        reverse_proxy app-api:8000
+    }
+
+    # Block common attack paths
+    @blocked_paths path /.env* /.git*
+    handle @blocked_paths {
+        respond "Forbidden" 403
+    }
+
+    # Default
+    handle {
+        respond "Not found" 404
+    }
+}

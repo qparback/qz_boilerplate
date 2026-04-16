@@ -1,0 +1,31 @@
+# Production overrides
+# Usage: make prod (on server, after deploy script rsyncs code)
+# Expects REGISTRY and VERSION to be set, OR build locally if images absent.
+
+services:
+  app-api:
+    build:
+      context: ..
+      dockerfile: docker/dockerfiles/Dockerfile.api
+      target: production
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  app-scheduler:
+    build:
+      context: ..
+      dockerfile: docker/dockerfiles/Dockerfile.scheduler
+      target: production
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  app-caddy:
+    volumes:
+      - ./caddy/Caddyfile.prod:/etc/caddy/Caddyfile:ro
+    ports:
+      - "80:80"
+      - "443:443"

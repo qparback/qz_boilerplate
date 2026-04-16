@@ -1,0 +1,24 @@
+# Development Caddy — no TLS, simple proxy
+# Note: handle_path strips the matched prefix before proxying so FastAPI sees clean paths
+# (FastAPI's root_path="/api" still tells OpenAPI to render the /api prefix in URLs).
+:80 {
+    # API routes — strip /api prefix before forwarding
+    handle_path /api/* {
+        reverse_proxy app-api:8000
+    }
+
+    # Admin interface — pass through as-is (FastAPI mounts at /admin)
+    handle /admin* {
+        reverse_proxy app-api:8000
+    }
+
+    # Health check
+    handle /health {
+        reverse_proxy app-api:8000
+    }
+
+    # Default — 404
+    handle {
+        respond "Not found" 404
+    }
+}

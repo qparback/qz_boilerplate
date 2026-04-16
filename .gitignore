@@ -1,0 +1,53 @@
+# ─── Secrets ──────────────────────────────────────────────────────────────────
+# Real env files — only *.config and *.example are committed
+env/.env.dev
+env/.env.test
+env/.env.prod
+env/.env.local
+env/.env
+*.pem
+*.key
+
+# ─── Python ───────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env_py/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+*.egg-info/
+dist/
+build/
+
+# ─── uv ───────────────────────────────────────────────────────────────────────
+# uv.lock IS committed for reproducibility
+.python-version
+
+# ─── Database dumps ───────────────────────────────────────────────────────────
+tests/fixtures/dev_dump.sql
+*.dump
+
+# ─── IDE ──────────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# ─── Claude Code ──────────────────────────────────────────────────────────────
+.claude/settings.local.json
+
+# ─── Logs ─────────────────────────────────────────────────────────────────────
+*.log
+logs/
+
+# ─── Caddy local data ─────────────────────────────────────────────────────────
+docker/caddy/data/
+docker/caddy/config/

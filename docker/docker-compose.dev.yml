@@ -1,0 +1,36 @@
+# Development overrides
+# Usage: make dev
+
+services:
+  app-api:
+    build:
+      context: ..
+      dockerfile: docker/dockerfiles/Dockerfile.api
+      target: development
+    volumes:
+      - ../api:/app/api:ro
+      - ../admin:/app/admin:ro
+      - ../migrations:/app/migrations:ro
+      - ../alembic.ini:/app/alembic.ini:ro
+    command: uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
+    ports:
+      - "8000:8000"
+
+  app-scheduler:
+    build:
+      context: ..
+      dockerfile: docker/dockerfiles/Dockerfile.scheduler
+      target: development
+    volumes:
+      - ../scheduler:/app/scheduler:ro
+      - ../api:/app/api:ro
+
+  app-db:
+    ports:
+      - "5432:5432"
+
+  app-caddy:
+    volumes:
+      - ./caddy/Caddyfile.dev:/etc/caddy/Caddyfile:ro
+    ports:
+      - "80:80"

@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Prompts{% endblock %}
+
+{% block content %}
+<h1>AI Prompts</h1>
+<p>Edit prompts directly in the database — they're loaded at runtime by <code>prompt_service.get_prompt(key)</code>.</p>
+
+<table class="data">
+    <thead>
+        <tr>
+            <th>Key</th>
+            <th>Name</th>
+            <th>Model</th>
+            <th>Temp</th>
+            <th>Max tokens</th>
+            <th>Active</th>
+            <th>Updated</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for p in prompts %}
+        <tr>
+            <td><code>{{ p.key }}</code></td>
+            <td>{{ p.name }}</td>
+            <td>{{ p.model }}</td>
+            <td>{{ '%.2f'|format(p.temperature) }}</td>
+            <td>{{ p.max_tokens }}</td>
+            <td>{{ 'yes' if p.active else 'no' }}</td>
+            <td>{{ p.updated_at.strftime('%Y-%m-%d %H:%M') }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7">No prompts in database.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<details style="margin-top:1.5rem;">
+    <summary>How to add a prompt</summary>
+    <pre><code>INSERT INTO prompts (key, name, description, content, model, temperature, max_tokens)
+VALUES ('my_prompt_key', 'Human readable name', 'What it does',
+        'Your system prompt text...', 'claude-sonnet-4-6', 0.7, 2000);</code></pre>
+</details>
+{% endblock %}

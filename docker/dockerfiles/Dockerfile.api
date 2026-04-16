@@ -1,0 +1,44 @@
+# ─── Base stage ───────────────────────────────────────────────────────────────
+# Uses the official uv image — uv is the package manager (faster than pip, lockfile-based).
+FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim AS base
+
+WORKDIR /app
+
+# System deps: curl is needed for the healthcheck.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# uv tuning for container builds:
+#   COMPILE_BYTECODE — pre-compile .pyc for faster startup
+#   LINK_MODE=copy   — avoid hardlink warnings on bind mounts
+ENV UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy \
+    UV_PROJECT_ENVIRONMENT=/app/.venv \
+    PATH="/app/.venv/bin:$PATH"
+
+# Install dependencies (cached layer — only re-runs when lockfile changes)
+COPY pyproject.toml uv.lock ./
+RUN uv sync --frozen --no-install-project --no-dev
+
+# ─── Development stage ────────────────────────────────────────────────────────
+# Source code is mounted as a volume in dev — no COPY needed.
+FROM base AS development
+# Re-install dev dependencies for the dev image (pytest etc.)
+RUN uv sync --frozen --no-install-project
+CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+
+# ─── Production stage ─────────────────────────────────────────────────────────
+FROM base AS production
+
+# Application code (no dev deps)
+COPY api/ ./api/
+COPY admin/ ./admin/
+COPY migrations/ ./migrations/
+COPY alembic.ini .
+
+# Non-root user
+RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
+USER appuser
+
+CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]

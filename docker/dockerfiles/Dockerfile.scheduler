@@ -1,0 +1,33 @@
+# Scheduler service — separate container so it can be scaled / restarted independently.
+FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim AS base
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        curl \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy \
+    UV_PROJECT_ENVIRONMENT=/app/.venv \
+    PATH="/app/.venv/bin:$PATH"
+
+COPY pyproject.toml uv.lock ./
+RUN uv sync --frozen --no-install-project --no-dev
+
+# ─── Development stage ────────────────────────────────────────────────────────
+FROM base AS development
+RUN uv sync --frozen --no-install-project
+CMD ["python", "-m", "scheduler.main"]
+
+# ─── Production stage ─────────────────────────────────────────────────────────
+FROM base AS production
+
+COPY scheduler/ ./scheduler/
+# Scheduler shares config + database modules with the API
+COPY api/ ./api/
+
+RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
+USER appuser
+
+CMD ["python", "-m", "scheduler.main"]

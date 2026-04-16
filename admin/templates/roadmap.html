@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Roadmap{% endblock %}
+
+{% block content %}
+<h1>Roadmap</h1>
+
+{% set phases = items|groupby('phase') %}
+{% for phase, group in phases %}
+    <h2>{{ phase }}</h2>
+    <table class="data">
+        <thead>
+            <tr>
+                <th>Title</th>
+                <th>Status</th>
+                <th>Description</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in group %}
+            <tr class="status-{{ item.status }}">
+                <td>{{ item.title }}</td>
+                <td>{{ item.status }}</td>
+                <td>{{ item.description or '' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% else %}
+    <p>No roadmap items yet.</p>
+{% endfor %}
+{% endblock %}

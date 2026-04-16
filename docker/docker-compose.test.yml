@@ -1,0 +1,32 @@
+# Test environment — spun up by 'make test', torn down after
+# Uses a separate DB on port 5433 with tmpfs storage (fast, discarded).
+
+services:
+  test-db:
+    container_name: ${PROJECT_NAME}-test-db
+    image: postgres:16-alpine
+    env_file:
+      - ../env/.env.test.config
+      - ../env/.env.test
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "5433:5432"
+    networks:
+      - app-net
+    volumes:
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    tmpfs:
+      - /var/lib/postgresql/data
+
+networks:
+  app-net:
+    external: true
+    name: ${PROJECT_NAME}-net
