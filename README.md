@@ -8,30 +8,55 @@ See [CLAUDE.md](CLAUDE.md) for the full architectural spec and rules.
 
 ---
 
-## Quick start
+## Starting a new project from this boilerplate
+
+The two-command happy path:
 
 ```bash
-# 1. Rename project (optional — defaults to "myapp")
-bash scripts/rename_project.sh mynewapp
+git clone https://github.com/qparback/qz_boilerplate.git mynewapp
+cd mynewapp && bash scripts/init_project.sh mynewapp
+```
 
-# 2. Copy env templates and fill in secrets
-cp env/.env.example env/.env.dev
-# Edit env/.env.dev — at minimum set API_KEY, POSTGRES_USER, POSTGRES_PASSWORD,
-# DATABASE_URL, ANTHROPIC_API_KEY, POSTMARK_SERVER_TOKEN, POSTMARK_FROM_EMAIL
+`init_project.sh` does six things and then stops so you can watch Docker boot:
 
-# 3. One-time server setup (creates external network + volume)
-make setup-server
+1. Renames `myapp` → your name across every file
+2. Generates `env/.env.dev` and `env/.env.test` with random `POSTGRES_PASSWORD`
+   and `API_KEY` (other external-service keys left blank — fill in when needed)
+3. Runs `uv lock` to produce `uv.lock`
+4. Runs `make setup-server` (creates the external Docker network + volume)
+5. **Replaces `.git` with a fresh repo** and makes the initial commit
+6. Prints the next commands to run
 
-# 4. Lock dependencies
-uv lock
+After it finishes:
 
-# 5. Start dev environment
-make dev
+```bash
+make dev                                # build + start the stack
+make stamp-baseline                     # one-time: tell Alembic the DB is at baseline
 
-# 6. Verify
+# Smoke tests
 curl http://localhost/health
-open http://localhost/api/docs
-open http://localhost/admin/
+curl -H "x-api-key: $(grep ^API_KEY env/.env.dev | cut -d= -f2)" \
+     http://localhost/api/v1/hello
+
+# Push to a remote when ready
+gh repo create your-org/mynewapp --private --source=. --push
+```
+
+That's it. You're now running a FastAPI + Postgres + Caddy stack with admin
+UI, scheduler, audit log, prompts-in-database, and a real test framework.
+
+## Manual setup
+
+If you'd rather see what `init_project.sh` does, the steps individually are:
+
+```bash
+bash scripts/rename_project.sh mynewapp                      # rename
+cp env/.env.example env/.env.dev && $EDITOR env/.env.dev     # fill in dev secrets
+cp env/.env.example env/.env.test && $EDITOR env/.env.test   # fill in test secrets
+uv lock                                                      # produce uv.lock
+make setup-server                                            # docker network + volume
+make dev                                                     # build + start
+make stamp-baseline                                          # one-time
 ```
 
 ---
