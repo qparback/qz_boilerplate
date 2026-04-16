@@ -1,6 +1,7 @@
 """ORM models. Import every model here so Alembic autogenerate sees them."""
 
 from api.models.base import BaseModel
+from api.models.hello import HelloMessage
 from api.models.system import (
     AppLog,
     AuditLog,
@@ -16,6 +17,7 @@ __all__ = [
     "AppLog",
     "AuditLog",
     "EmailLog",
+    "HelloMessage",
     "MemoryFile",
     "Prompt",
     "RoadmapItem",

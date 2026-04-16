@@ -85,6 +85,7 @@ async def dashboard(request: Request, db: AsyncSession = Depends(get_db)):
     ).scalar()
 
     return templates.TemplateResponse(
+        request,
         "dashboard.html",
         {
             **_common_context(request),
@@ -115,6 +116,7 @@ async def logs(
 
     rows = (await db.execute(text(query), params)).fetchall()
     return templates.TemplateResponse(
+        request,
         "logs.html",
         {
             **_common_context(request),
@@ -129,6 +131,7 @@ async def logs(
 async def prompts(request: Request, db: AsyncSession = Depends(get_db)):
     rows = (await db.execute(text("SELECT * FROM prompts ORDER BY key"))).fetchall()
     return templates.TemplateResponse(
+        request,
         "prompts.html",
         {**_common_context(request), "prompts": rows},
     )
@@ -140,6 +143,7 @@ async def roadmap(request: Request, db: AsyncSession = Depends(get_db)):
         await db.execute(text("SELECT * FROM roadmap_items ORDER BY phase, priority"))
     ).fetchall()
     return templates.TemplateResponse(
+        request,
         "roadmap.html",
         {**_common_context(request), "items": rows},
     )

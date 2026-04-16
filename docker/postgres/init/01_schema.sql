@@ -88,6 +88,16 @@ CREATE TABLE IF NOT EXISTS memory_files (
 );
 CREATE INDEX IF NOT EXISTS idx_memory_files_context ON memory_files(context_key);
 
+-- ─── Hello messages ──────────────────────────────────────────────────────────
+-- Smoke-test table. Demonstrates the model/router/schema pattern and gives
+-- /v1/hello/db something to read. Safe to drop when you have real resources.
+CREATE TABLE IF NOT EXISTS hello_messages (
+    id         UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    message    TEXT        NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 -- ─── Roadmap ─────────────────────────────────────────────────────────────────
 -- Shown in the admin UI. Free-form, mostly informational.
 CREATE TABLE IF NOT EXISTS roadmap_items (
@@ -116,6 +126,10 @@ INSERT INTO prompts (key, name, description, content) VALUES
         'Please help with the following: {task}\n\nContext: {context}'
     )
 ON CONFLICT (key) DO NOTHING;
+
+INSERT INTO hello_messages (message) VALUES
+    ('hello world from db')
+ON CONFLICT DO NOTHING;
 
 INSERT INTO roadmap_items (phase, title, description, status, priority) VALUES
     ('MVP',     'Boilerplate setup',         'Initial project scaffolding from CLAUDE.md spec', 'done',        0),

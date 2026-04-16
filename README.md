@@ -90,4 +90,4 @@ Follow the pattern in [CLAUDE.md — Adding a New Resource](CLAUDE.md#adding-a-n
 
 ## License
 
-Internal QuantumZero. Not for redistribution.
+MIT — see [LICENSE](LICENSE). Use it, fork it, ship something cool.

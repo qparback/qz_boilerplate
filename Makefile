@@ -129,6 +129,12 @@ TEST_COMPOSE = docker compose \
     --env-file env/.env.test \
     -f docker/docker-compose.test.yml
 
+# Pytest runs on the HOST, not in a container, so it needs the test env vars
+# loaded into the shell before invocation. `set -a` exports every var defined
+# by the sourced files. The test DB connection is rewritten in conftest.py
+# from app-network host (myapp-test-db:5432) to host-network (localhost:5433).
+PYTEST_ENV = set -a && . ./env/.env.test.config && . ./env/.env.test && set +a
+
 test:
 	@echo "Starting test database..."
 	$(TEST_COMPOSE) up -d test-db
@@ -141,12 +147,12 @@ test:
 	@docker exec -i $(PROJECT_NAME)-test-db sh -c \
 	  'psql -U $$POSTGRES_USER -d $$POSTGRES_DB' < tests/fixtures/base_data.sql
 	@echo "Running tests..."
-	@uv run pytest tests/ -v --tb=short || (status=$$?; $(TEST_COMPOSE) down; exit $$status)
+	@bash -c '$(PYTEST_ENV) && uv run pytest tests/ -v --tb=short' || (status=$$?; $(TEST_COMPOSE) down; exit $$status)
 	@echo "Tearing down test database..."
 	$(TEST_COMPOSE) down
 
 test-unit:
-	uv run pytest tests/unit/ -v --tb=short
+	@bash -c '$(PYTEST_ENV) && uv run pytest tests/unit/ -v --tb=short'
 
 test-from-dev:
 	@echo "Dumping dev database..."
@@ -158,7 +164,7 @@ test-from-dev:
 	    sleep 1; \
 	done
 	bash scripts/db_restore_test.sh
-	uv run pytest tests/ -v --tb=short -m "not requires_clean_data"
+	@bash -c '$(PYTEST_ENV) && uv run pytest tests/ -v --tb=short -m "not requires_clean_data"'
 	$(TEST_COMPOSE) down
 
 # ─── Deployment ───────────────────────────────────────────────────────────────

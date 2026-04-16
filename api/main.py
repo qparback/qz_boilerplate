@@ -61,6 +61,11 @@ async def health() -> dict:
 #   from api.routers.users import router as users_router
 #   app.include_router(users_router, prefix="/v1", dependencies=[Depends(verify_api_key)])
 
+from api.routers.hello import router as hello_router
+
+app.include_router(hello_router, prefix="/v1", dependencies=[Depends(verify_api_key)])
+
+
 # Sentinel route used by integration tests to verify auth enforcement.
 @app.get("/v1/_auth_check", dependencies=[Depends(verify_api_key)], include_in_schema=False)
 async def auth_check() -> dict:

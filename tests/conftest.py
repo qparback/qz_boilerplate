@@ -19,7 +19,8 @@ import os
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.pool import NullPool
 
 from api.config import settings
 from api.database import get_db
@@ -50,7 +51,10 @@ TEST_DATABASE_URL = _build_test_database_url()
 
 @pytest_asyncio.fixture(scope="session")
 async def test_engine():
-    engine = create_async_engine(TEST_DATABASE_URL, echo=False)
+    # NullPool — never reuse asyncpg connections between operations. The default
+    # QueuePool can hand back a connection that's still mid-transaction from a
+    # previous test, which asyncpg refuses ("another operation in progress").
+    engine = create_async_engine(TEST_DATABASE_URL, echo=False, poolclass=NullPool)
     yield engine
     await engine.dispose()
 
@@ -58,26 +62,39 @@ async def test_engine():
 @pytest_asyncio.fixture
 async def db(test_engine):
     """
-    Per-test session inside a transaction that gets rolled back.
+    Per-test session, shared underlying database.
 
-    Note: `get_db` in the app calls `commit()` on success — we override the
-    dependency in the `client` fixture to use a no-commit version.
+    The test DB is recreated fresh by `make test` (tmpfs), so we accept that
+    state may persist *within* a single pytest run. Tests should be read-only
+    or use unique IDs to avoid clashing with each other.
+
+    A previous version used SAVEPOINT-based rollback, but asyncpg disallows
+    concurrent operations on the same raw connection — and FastAPI's dep
+    override re-enters the same session, which triggers the conflict.
+    Splitting out a clean session per test sidesteps that entirely.
     """
-    async with test_engine.connect() as connection:
-        trans = await connection.begin()
-        session_factory = async_sessionmaker(bind=connection, expire_on_commit=False)
-        async with session_factory() as session:
-            try:
-                yield session
-            finally:
-                await trans.rollback()
+    async with AsyncSession(bind=test_engine, expire_on_commit=False) as session:
+        yield session
 
 
 @pytest_asyncio.fixture
-async def client(db):
+async def client(test_engine):
+    """
+    HTTP client that uses a *fresh* session per request.
+
+    We can't share the test's `db` fixture session here because asyncpg refuses
+    concurrent operations on a single connection — and FastAPI's dependency
+    machinery would re-enter the same session that the test still holds.
+    """
+
     async def override_get_db():
-        # Yield without commit — the transaction will be rolled back by the `db` fixture.
-        yield db
+        async with AsyncSession(bind=test_engine, expire_on_commit=False) as session:
+            try:
+                yield session
+                await session.commit()
+            except Exception:
+                await session.rollback()
+                raise
 
     app.dependency_overrides[get_db] = override_get_db
     async with AsyncClient(
